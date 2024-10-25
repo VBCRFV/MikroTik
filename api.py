@@ -144,7 +144,7 @@ class ApiRos:
             # print((">>> " + s.decode(sys.stdout.encoding, 'ignore')))
             ret += s.decode(sys.stdout.encoding, "replace")
         return ret
-    
+
 def connect(ApiRos,hst:str=None,use:str='admin',pas:str='',prt:int=None,tls:bool=False,debug:bool=False):
     if prt is None: prt = 8729 if tls else 8728
     s = socket.socket()  # Создаём сокет по умолчанию: socket.socket(2,1,0).
@@ -158,12 +158,17 @@ def connect(ApiRos,hst:str=None,use:str='admin',pas:str='',prt:int=None,tls:bool
     except ssl.SSLError:
         exit_code = 3
         print(f'По всей видимости, у сервиса api-ssl нет сертификата.\n\texit_code: {exit_code}')
+        code  = ('\nСОЗДАЁМ СА\n/certificate\nadd name=ca common-name="certificate authority" days-valid=9999 key-usage=key-cert-sign,crl-sign\nsign ca\n\n'
+                 'СОЗДАЁМ TLS\n/certificate\nadd name=api-ssl common-name=api-ssl days-valid=9999 key-usage=tls-client\nsign api-ssl ca=ca\n\n'
+                 'ВЫБИРАЕМ СЕРТИФИКАТ\n/ip service\nset [find name=api-ssl] certificate=api-ssl\n')
+        print(code)
         sys.exit(exit_code)
     except ConnectionRefusedError:
         exit_code = 2
         сервис = 'api-ssl' if tls else 'api'
-        print(
-            f'Проверте доступность устройства {hst}\nи включен ли на нём сервис {сервис} (port: {prt})\n\texit_code: {exit_code}')
+        print(f'Проверте доступность устройства {hst}\nи включен ли на нём сервис {сервис} (port: {prt})\n\texit_code: {exit_code}')
+        code = ('\n/ip/service\nset [find name=api-ssl] port=8729\nenable api-ssl\n') if tls else ('\n/ip/service\nset [find name=api] port=8728\nenable api\n')
+        print(code)
         sys.exit(exit_code)
     api = ApiRos(s, debug=debug)
     if not api.login(use, pas):
